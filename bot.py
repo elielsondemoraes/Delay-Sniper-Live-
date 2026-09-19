@@ -50,7 +50,6 @@ def verificar_atualizacoes(offset=None):
         return None
 
 def buscar_proximos_jogos():
-    # Busca partidas agendadas para o dia de hoje para antecipar os horários das janelas quentes
     data_hoje = datetime.now().strftime("%Y-%m-%d")
     url = f"https://api.football-data.org/v4/matches?dateFrom={data_hoje}&dateTo={data_hoje}"
     headers = {'X-Auth-Token': FOOTBALL_API_KEY}
@@ -71,7 +70,7 @@ def main():
     t = Thread(target=run_flask)
     t.start()
     
-    logging.info("Delay Sniper Preditivo (Foco em Janelas Críticas) iniciado com sucesso!")
+    logging.info("Delay Sniper Preditivo (Corrigido) iniciado com sucesso!")
     offset = None
     ultimo_ciclo = time.time()
 
@@ -116,7 +115,7 @@ def main():
                         if texto_msg.startswith("/start"):
                             resposta = (
                                 f"Fala, {nome}! ⚡\n\n"
-                                "O **Delay Sniper (Modo Preditivo de Janelas)** está ativo!\n"
+                                "O **Delay Sniper (Modo Preditivo)** está ativo!\n"
                                 "🎯 Avisamos-te com antemão quando o jogo entra na zona crítica de pressão.\n\n"
                                 "Envie **/monitorar** para armar o radar."
                             )
@@ -130,17 +129,17 @@ def main():
                             )
                             enviar_mensagem(chat_id, resposta)
 
-            # 2. Varredura a cada 60 segundos para cruzar o horário das partidas com as janelas de gol/cantos
+            # 2. Varredura a cada 60 segundos
             tempo_atual = time.time()
             if tempo_atual - ultimo_ciclo >= 60:
                 partidas = buscar_proximos_jogos()
-                hora_utc_atual = datetime.utcnow() # A API usa horários de referência padrão
+                hora_utc_atual = datetime.utcnow()
                 
                 if partidas and chats_monitorados:
                     for jogo in partidas:
                         status_jogo = jogo.get("status")
                         if status_jogo in ["TIMED", "SCHEDULED", "LIVE", "IN_PLAY"]:
-                            utc_date_str = jogo.get("utcDate") # Ex: 2026-06-06T18:00:00Z
+                            utc_date_str = jogo.get("utcDate")
                             if not utc_date_str:
                                 continue
                             
@@ -153,8 +152,6 @@ def main():
                                 away = jogo.get("awayTeam", {}).get("name", "Fora")
                                 liga = jogo.get("competition", {}).get("name", "Futebol")
                                 
-                                # Janela 1: Final do 1º Tempo (~40 a 45 minutos de jogo)
-                                # Janela 2: Final do 2º Tempo (~80 a 90 minutos de jogo)
                                 eh_janela_1 = 40 <= diff_minutos <= 46
                                 eh_janela_2 = 80 <= diff_minutos <= 92
                                 
@@ -162,7 +159,7 @@ def main():
                                     fase_janela = "Fim do 1º Tempo (Pressão de Fechamento)" if eh_janela_1 else "Reta Final do 2º Tempo (Abafa Total)"
                                     chave_sinal = f"{id_jogo}_{'J1' if eh_janela_1 else 'J2'}"
                                     
-                                    if chave_sinal in sinais_enviados_enviados_se_existir := sinais_enviados_hoje:
+                                    if chave_sinal in sinais_enviados_hoje:
                                         continue
                                         
                                     sinais_enviados_hoje.add(chave_sinal)
@@ -181,7 +178,7 @@ def main():
                                     
                                     for chat_id in chats_monitorados:
                                         enviar_mensagem(chat_id, alerta)
-                                    break # Dispara um por ciclo
+                                    break
                             except Exception as parse_err:
                                 logging.error(f"Erro ao processar data do jogo: {parse_err}")
 
@@ -193,3 +190,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
