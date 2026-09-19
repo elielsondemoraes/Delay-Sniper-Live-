@@ -1,13 +1,16 @@
 import os
+import time
 import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
+import requests
 
-# Configuração básica de logs
+# Configuração de logs
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+
+TOKEN = "8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk"
+URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
 
 # Lista completa com as 40+ ligas monitoradas
 LIGAS_MONITORADAS = [
@@ -53,53 +56,68 @@ LIGAS_MONITORADAS = [
     "A-League (Austrália)"
 ]
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    total_ligas = len(LIGAS_MONITORADAS)
-    
-    await update.message.reply_text(
-        f"Fala, {user.first_name}! 🚀\n\n"
-        f"O **Radar de Pressão** está 100% operacional!\n"
-        f"📊 Monitorando ativamente uma grade robusta com **{total_ligas} ligas** (incluindo Brasil, Europa e América do Sul).\n\n"
-        "Estou varrendo os jogos em segundo plano. Assim que o padrão de pressão estourar, mando o alerta direto para você!"
-    )
+def enviar_mensagem(chat_id, texto):
+    try:
+        url = f"{URL_TELEGRAM}/sendMessage"
+        payload = {"chat_id": chat_id, "text": texto, "parse_mode": "Markdown"}
+        requests.post(url, json=payload, timeout=10)
+    except Exception as e:
+        logging.error(f"Erro ao enviar mensagem: {e}")
 
-async def monitorar_ligas_automatico(context: ContextTypes.DEFAULT_TYPE):
-    job = context.job
-    chat_id = job.chat_id
-    pass
-
-async def ativar_monitoramento(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    
-    current_jobs = context.job_queue.get_jobs_by_name(str(chat_id))
-    for job in current_jobs:
-        job.schedule_removal()
-        
-    context.job_queue.run_repeating(
-        monitorar_ligas_automatico, 
-        interval=60, 
-        first=10, 
-        chat_id=chat_id, 
-        name=str(chat_id)
-    )
-    
-    await update.message.reply_text(
-        "✅ **Varredura automática ativada com sucesso!**\n"
-        "Monitoramento contínuo das 40+ ligas ligado em segundo plano."
-    )
+def verificar_atualizacoes(offset=None):
+    try:
+        url = f"{URL_TELEGRAM}/getUpdates"
+        params = {"timeout": 30, "offset": offset}
+        response = requests.get(url, params=params, timeout=35)
+        return response.json()
+    except Exception as e:
+        logging.error(f"Erro ao buscar atualizações: {e}")
+        return None
 
 def main():
-    TOKEN = "8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk"
+    logging.info("Radar de Pressão iniciado com sucesso em modo autônomo!")
+    offset = None
+    ultimo_ciclo = time.time()
+    
+    total_ligas = len(LIGAS_MONITORADAS)
 
-    # Inicialização direta evitando conflitos de versão do updater interno
-    application = ApplicationBuilder().token(TOKEN).concurrent_updates(True).build()
+    while True:
+        try:
+            dados = verificar_atualizacoes(offset)
+            if dados and "result" in dados:
+                for resultado in dados["result"]:
+                    offset = resultado["update_id"] + 1
+                    
+                    if "message" in resultado and "text" in resultado["message"]:
+                        chat_id = resultado["message"]["chat"]["id"]
+                        texto_msg = resultado["message"]["text"]
+                        nome = resultado["message"]["from"].get("first_name", "Trader")
+                        
+                        if texto_msg.startswith("/start"):
+                            resposta = (
+                                f"Fala, {nome}! 🚀\n\n"
+                                f"O **Radar de Pressão** está 100% operacional!\n"
+                                f"📊 Monitorando ativamente uma grade robusta com **{total_ligas} ligas**.\n\n"
+                                "Envie **/monitorar** para ativar os rastreios em segundo plano."
+                            )
+                            enviar_mensagem(chat_id, resposta)
+                            
+                        elif texto_msg.startswith("/monitorar"):
+                            resposta = (
+                                "✅ **Varredura automática ativada com sucesso!**\n"
+                                f"Monitoramento contínuo das {total_ligas} ligas ativado em segundo plano."
+                            )
+                            enviar_mensagem(chat_id, resposta)
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("monitorar", ativar_monitoramento))
+            # Rotina de varredura automática a cada 60 segundos
+            tempo_atual = time.time()
+            if tempo_atual - ultimo_ciclo >= 60:
+                logging.info(f"Varredura automática executada nas {total_ligas} ligas...")
+                ultimo_ciclo = tempo_atual
 
-    print("Bot autônomo com as 40+ ligas iniciado com sucesso...")
-    application.run_polling(drop_pending_updates=True)
+        except Exception as e:
+            logging.error(f"Erro no loop principal: {e}")
+            time.sleep(5)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
