@@ -10,17 +10,14 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Lista completa com as 40+ ligas monitoradas (incluindo as principais solicitadas)
+# Lista completa com as 40+ ligas monitoradas
 LIGAS_MONITORADAS = [
-    # Principais da América do Sul e Brasil
     "Copa Libertadores",
     "Copa Sul-Americana",
     "Campeonato Brasileiro Série A",
     "Campeonato Brasileiro Série B",
     "Liga Profissional da Argentina",
     "Campeonato Carioca / Paulista / Regionais",
-    
-    # Principais da Europa
     "Premier League (Inglaterra)",
     "La Liga (Espanha)",
     "Bundesliga (Alemanha)",
@@ -35,8 +32,6 @@ LIGAS_MONITORADAS = [
     "2. Bundesliga (Alemanha)",
     "Serie B (Itália)",
     "Ligue 2 (França)",
-    
-    # Outras ligas competitivas e alternativas de gols
     "Super League (Grécia)",
     "Bundesliga (Áustria)",
     "Superliga (Dinamarca)",
@@ -70,28 +65,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Estou varrendo os jogos em segundo plano. Assim que o padrão de pressão estourar, mando o alerta direto para você!"
     )
 
-# Função de varredura automática rodando nas ligas selecionadas a cada 60 segundos
 async def monitorar_ligas_automatico(context: ContextTypes.DEFAULT_TYPE):
     job = context.job
     chat_id = job.chat_id
-    
-    # O bot executa a checagem em segundo plano nas 40+ ligas da lista
-    # Quando o gatilho de pressão for ativado em tempo real, ele dispara o sinal:
-    # await context.bot.send_message(
-    #     chat_id=chat_id, 
-    #     text="🚨 **ALERTA DE PRESSÃO AO VIVO!** 🚨\n..."
-    # )
     pass
 
 async def ativar_monitoramento(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     
-    # Remove tarefas anteriores para evitar duplicidade
     current_jobs = context.job_queue.get_jobs_by_name(str(chat_id))
     for job in current_jobs:
         job.schedule_removal()
         
-    # Agenda a varredura automática a cada 60 segundos
     context.job_queue.run_repeating(
         monitorar_ligas_automatico, 
         interval=60, 
@@ -106,7 +91,6 @@ async def ativar_monitoramento(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 def main():
-    # Token configurado diretamente no código com segurança
     TOKEN = "8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk"
 
     application = ApplicationBuilder().token(TOKEN).build()
@@ -115,8 +99,6 @@ def main():
     application.add_handler(CommandHandler("monitorar", ativar_monitoramento))
 
     print("Bot autônomo com as 40+ ligas iniciado com sucesso...")
-    
-    # Executa o bot utilizando o método de polling otimizado para servidores em nuvem
     application.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
