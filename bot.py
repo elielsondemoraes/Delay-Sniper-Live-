@@ -43,6 +43,7 @@ def verificar_atualizacoes(offset=None):
         return None
 
 def buscar_jogos_ao_vivo():
+    # Endpoint otimizado para buscar todas as partidas ao vivo disponíveis na camada gratuita
     url = "https://api.football-data.org/v4/matches?status=LIVE"
     headers = {'X-Auth-Token': FOOTBALL_API_KEY}
     
@@ -59,7 +60,8 @@ def buscar_jogos_ao_vivo():
                 liga = jogo.get("competition", {}).get("name", "Futebol")
                 status = jogo.get("status", "")
                 
-                if status in ["LIVE", "IN_PLAY", "PAUSED"]:
+                # Garante que apanha qualquer estado de jogo a decorrer
+                if status in ["LIVE", "IN_PLAY", "PAUSED", "HT"]:
                     jogos_ao_vivo.append({
                         "idEvent": jogo.get("id"),
                         "strHomeTeam": home,
@@ -68,6 +70,7 @@ def buscar_jogos_ao_vivo():
                     })
             return jogos_ao_vivo
         else:
+            logging.warning(f"API retornou status code: {response.status_code}")
             return []
     except Exception as e:
         logging.error(f"Erro ao consultar API ao vivo: {e}")
@@ -76,7 +79,7 @@ def buscar_jogos_ao_vivo():
 def main():
     global total_sinais_enviados, relatorio_enviado_hoje
     
-    logging.info("Delay Sniper Multi-Mercados (Modo Antecipação) iniciado!")
+    logging.info("Delay Sniper Multi-Mercados (Foco Versão Gratuita) iniciado!")
     offset = None
     ultimo_ciclo = time.time()
 
@@ -102,7 +105,7 @@ def main():
                         f"✅ **Greens (Acertos):** {greens_do_dia}\n"
                         f"❌ **Reds (Erros):** {reds_do_dia}\n"
                         f"📈 **Assertividade:** {int((greens_do_dia / max(1, total_sinais_enviados)) * 100)}%\n\n"
-                        "💡 *O radar cirúrgico antecipou os momentos de maior ebulição do jogo. Excelente rendimento!* 🚀"
+                        "💡 *Missão cumprida na faixa gratuita. Bora forrar mais amanhã!* 🚀"
                     )
                     for chat_id in chats_monitorados:
                         enviar_mensagem(chat_id, relatorio_noite)
@@ -123,24 +126,24 @@ def main():
                         if texto_msg.startswith("/start"):
                             resposta = (
                                 f"Fala, {nome}! 🚀\n\n"
-                                "O **Delay Sniper Multi-Mercados (Modo Antecipação)** está ativo!\n"
-                                "📊 Focado em disparar momentos antes do gol, cantos decisivos e cartões.\n\n"
-                                "Envie **/monitorar** para armar o radar cirúrgico."
+                                "O **Delay Sniper (Modo Gratuito Ativo)** está a todo o vapor!\n"
+                                "📊 Focado em extrair o máximo de Gols, Cantos e Cartões das partidas disponíveis.\n\n"
+                                "Envie **/monitorar** para armar o radar."
                             )
                             enviar_mensagem(chat_id, resposta)
                             
                         elif texto_msg.startswith("/monitorar"):
                             chats_monitorados.add(chat_id)
                             resposta = (
-                                "✅ **Radar Cirúrgico de Antecipação Armado!**\n"
-                                "Pronto para pegar o jogo no gatilho do gol iminente."
+                                "✅ **Radar Cirúrgico Armado!**\n"
+                                "A caçar oportunidades em tempo real."
                             )
                             enviar_mensagem(chat_id, resposta)
 
             # 2. Varredura de jogos a cada 60 segundos
             tempo_atual = time.time()
             if tempo_atual - ultimo_ciclo >= 60:
-                logging.info("A escanear janelas de antecipação na rede...")
+                logging.info("A escanear o feed de partidas ao vivo...")
                 
                 jogos = buscar_jogos_ao_vivo()
                 if jogos and chats_monitorados:
@@ -154,48 +157,44 @@ def main():
                             continue
                             
                         jogos_recentes_enviados.add(id_jogo)
-                        if len(jogos_recentes_enviados) > 40:
+                        if len(jogos_recentes_enviados) > 50:
                             jogos_recentes_enviados.pop()
 
                         total_sinais_enviados += 1
                         tipo_alerta = i % 3
                         
                         if tipo_alerta == 0:
-                            # Antecipação de Gol Iminente
                             alerta = (
                                 "🎯 **SNIPER ANTECIPAÇÃO — GOL IMINENTE** ⚡\n\n"
                                 f"🏆 **Liga:** {liga}\n"
                                 f"⚔️ **Confronto:** {home} vs {away}\n"
                                 "⏱ **Momento:** Janela Crítica (Sufoco Máximo)\n\n"
                                 "📊 **Leitura Cirúrgica:**\n"
-                                "• O volume ofensivo explodiu nos últimos instantes.\n"
-                                "• Defesa totalmente encurralada na área.\n\n"
-                                "🔥 *Gatilho acionado: Prepare-se para o gol nos próximos minutos!*"
+                                "• Pressão sufocante na área nos últimos minutos.\n\n"
+                                "🔥 *Gatilho acionado: Prepare-se para o gol!*"
                             )
                         elif tipo_alerta == 1:
-                            # Antecipação de Escanteios por Tempo
                             alerta = (
                                 "🚩 **SNIPER ANTECIPAÇÃO — PRESSÃO DE CANTOS** 🚩\n\n"
                                 f"🏆 **Liga:** {liga}\n"
                                 f"⚔️ **Confronto:** {home} vs {away}\n"
                                 "⏱ **Momento:** Fechamento de Bloco Ofensivo\n\n"
                                 "📊 **Leitura Cirúrgica:**\n"
-                                "• Sequência de cruzamentos bloqueados e chutes desviados.\n\n"
+                                "• Volume alto de cruzamentos e bloqueios defensivos.\n\n"
                                 "🎯 *Entradas Alvo por Tempo:*\n"
-                                "• **1º Tempo:** Linha de 3.5 / 4.5 cantos na iminência\n"
-                                "• **2º Tempo:** Linha de 5.5 / 6.5 cantos explosiva\n"
+                                "• **1º Tempo:** Alvo de 3.5 / 4.5 cantos\n"
+                                "• **2º Tempo:** Alvo de 5.5 / 6.5 cantos\n"
                                 "🔥 *Prepare o gatilho para a cobrança!*"
                             )
                         else:
-                            # Antecipação de Cartão Vermelho / Jogo Quente
                             alerta = (
                                 "🟥 **SNIPER ANTECIPAÇÃO — CARTÃO / CLIMA FERVENTO** 🟥\n\n"
                                 f"🏆 **Liga:** {liga}\n"
                                 f"⚔️ **Confronto:** {home} vs {away}\n"
                                 "⏱ **Momento:** Índice de Faltas Explosivo\n\n"
                                 "📊 **Leitura Cirúrgica:**\n"
-                                "• Jogo picotado com cartões amarelos sequenciais e bate-boca.\n\n"
-                                "🔥 *Gatilho acionado: Risco iminente de expulsão (Vermelho)!*"
+                                "• Partida tensa com forte atrito em campo.\n\n"
+                                "🔥 *Gatilho acionado: Risco iminente de cartão vermelho!*"
                             )
 
                         for chat_id in chats_monitorados:
