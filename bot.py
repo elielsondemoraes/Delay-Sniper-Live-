@@ -159,6 +159,7 @@ def main():
                                     fase_janela = "Fim do 1º Tempo (Pressão de Fechamento)" if eh_janela_1 else "Reta Final do 2º Tempo (Abafa Total)"
                                     chave_sinal = f"{id_jogo}_{'J1' if eh_janela_1 else 'J2'}"
                                     
+                                    # Correção aplicada aqui (validação limpa sem expressão de atribuição)
                                     if chave_sinal in sinais_enviados_hoje:
                                         continue
                                         
@@ -190,4 +191,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
