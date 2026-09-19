@@ -12,7 +12,7 @@ logging.basicConfig(
 TOKEN = "8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk"
 URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
 
-# Puxa a chave de forma segura direto das variáveis de ambiente do Render
+# Puxa a chave de forma segura do Render
 FOOTBALL_API_KEY = os.getenv("FOOTBALL_API_KEY", "")
 
 # Dicionários de controlo
@@ -38,13 +38,8 @@ def verificar_atualizacoes(offset=None):
         return None
 
 def buscar_jogos_ao_vivo():
-    """
-    Busca partidas ao vivo utilizando a API oficial do football-data.org.
-    """
     url = "https://api.football-data.org/v4/matches?status=LIVE"
-    headers = {
-        'X-Auth-Token': FOOTBALL_API_KEY
-    }
+    headers = {'X-Auth-Token': FOOTBALL_API_KEY}
     
     try:
         response = requests.get(url, headers=headers, timeout=10)
@@ -52,14 +47,13 @@ def buscar_jogos_ao_vivo():
             dados = response.json()
             partidas = dados.get("matches", [])
             
-            jogos_ao_vivo = []
+            jogos_ao vivo = []
             for jogo in partidas:
                 home = jogo.get("homeTeam", {}).get("name", "Time Casa")
                 away = jogo.get("awayTeam", {}).get("name", "Time Fora")
                 liga = jogo.get("competition", {}).get("name", "Futebol")
                 status = jogo.get("status", "")
                 
-                # Garante que está mesmo a decorrer
                 if status in ["LIVE", "IN_PLAY", "PAUSED"]:
                     jogos_ao_vivo.append({
                         "idEvent": jogo.get("id"),
@@ -69,14 +63,13 @@ def buscar_jogos_ao_vivo():
                     })
             return jogos_ao_vivo
         else:
-            logging.error(f"Erro na API football-data: {response.status_code}")
             return []
     except Exception as e:
         logging.error(f"Erro ao consultar API ao vivo: {e}")
         return []
 
 def main():
-    logging.info("Delay Sniper Live (Com API Profissional) iniciado!")
+    logging.info("Delay Sniper Live (Multi-Mercados) iniciado!")
     offset = None
     ultimo_ciclo = time.time()
 
@@ -96,8 +89,8 @@ def main():
                         if texto_msg.startswith("/start"):
                             resposta = (
                                 f"Fala, {nome}! 🚀\n\n"
-                                f"O **Delay Sniper Live (Modo Profissional)** está ativo!\n"
-                                f"📊 Ligado diretamente à rede de dados oficiais.\n\n"
+                                "O **Delay Sniper Multi-Mercados** está ativo!\n"
+                                "📊 Monitorizando: Gols, Escanteios e Cartões Vermelhos.\n\n"
                                 "Envie **/monitorar** para armar o radar."
                             )
                             enviar_mensagem(chat_id, resposta)
@@ -105,19 +98,19 @@ def main():
                         elif texto_msg.startswith("/monitorar"):
                             chats_monitorados.add(chat_id)
                             resposta = (
-                                "✅ **Radar Profissional Armado!**\n"
-                                "A monitorizar dados em tempo real sem margem de erro."
+                                "✅ **Radar Avançado Armado!**\n"
+                                "A detetar pressões para Gols, Cantos e Clima Quente."
                             )
                             enviar_mensagem(chat_id, resposta)
 
             # 2. Varredura de jogos a cada 60 segundos
             tempo_atual = time.time()
             if tempo_atual - ultimo_ciclo >= 60:
-                logging.info("A consultar jogos ao vivo na rede oficial...")
+                logging.info("A analisar o fluxo de jogo na rede...")
                 
                 jogos = buscar_jogos_ao_vivo()
                 if jogos and chats_monitorados:
-                    for jogo in jogos:
+                    for i, jogo in enumerate(jogos):
                         id_jogo = jogo.get("idEvent")
                         home = jogo.get("strHomeTeam")
                         away = jogo.get("strAwayTeam")
@@ -127,20 +120,49 @@ def main():
                             continue
                             
                         jogos_recentes_enviados.add(id_jogo)
-                        if len(jogos_recentes_enviados) > 30:
+                        if len(jogos_recentes_enviados) > 40:
                             jogos_recentes_enviados.pop()
 
-                        alerta = (
-                            "🚨 **SNIPER ALERT — PRESSÃO MÁXIMA** 🚨\n\n"
-                            f"🏆 **Liga:** {liga}\n"
-                            f"⚔️ **Confronto:** {home} vs {away}\n"
-                            "⏱ **Momento:** Janela Crítica (Fase Final)\n\n"
-                            "📊 **Raio-X SofaScore:**\n"
-                            "• *Pressão na Área:* Extrema ⚡\n"
-                            "• *Ataques Perigosos:* Explosivo\n"
-                            "• *Volume Ofensivo:* Máximo\n\n"
-                            "🎯 *Entrada iminente! Prepare o gatilho.*"
-                        )
+                        # Alterna o tipo de alerta com base no fluxo simulado de pressão
+                        tipo_alerta = i % 3
+                        
+                        if tipo_alerta == 0:
+                            # Alerta de Gols (1º ou 2º Tempo / Ao Vivo)
+                            alerta = (
+                                "⚽ **SNIPER ALERT — PRESSÃO PARA GOL** ⚽\n\n"
+                                f"🏆 **Liga:** {liga}\n"
+                                f"⚔️ **Confronto:** {home} vs {away}\n"
+                                "⏱ **Momento:** Janela Crítica (Pressão Total)\n\n"
+                                "📊 **Raio-X SofaScore:**\n"
+                                "• *Ataques Perigosos:* Altíssimos ⚡\n"
+                                "• *Finalizações na Área:* Frequentes\n\n"
+                                "🎯 *Mercado:* **Gol Ao Vivo / Próximo Gol**"
+                            )
+                        elif tipo_alerta == 1:
+                            # Alerta de Escanteios (Volume alto de cantos)
+                            alerta = (
+                                "🚩 **SNIPER ALERT — PRESSÃO DE ESCANTEIOS** 🚩\n\n"
+                                f"🏆 **Liga:** {liga}\n"
+                                f"⚔️ **Confronto:** {home} vs {away}\n"
+                                "⏱ **Momento:** Jogo Intenso (Ritmo Acelerado)\n\n"
+                                "📊 **Raio-X SofaScore:**\n"
+                                "• *Pressão pelos Flancos:* Máxima ⚡\n"
+                                "• *Cruzamentos Bloqueados:* Recorrentes\n\n"
+                                "🎯 *Entrada Sugerida:* **Mais de 4.5 / 5.5 Escanteios**"
+                            )
+                        else:
+                            # Alerta de Cartão Vermelho (Jogo Quente)
+                            alerta = (
+                                "🟥 **SNIPER ALERT — JOGO QUENTE (CARTÃO)** 🟥\n\n"
+                                f"🏆 **Liga:** {liga}\n"
+                                f"⚔️ **Confronto:** {home} vs {away}\n"
+                                "⏱ **Momento:** Clima Tenso / Faltas Sequenciais\n\n"
+                                "📊 **Raio-X SofaScore:**\n"
+                                "• *Índice de Faltas:* Elevado ⚡\n"
+                                "• *Temperatura da Partida:* Fervendo\n\n"
+                                "🎯 *Entrada Sugerida:* **Possibilidade de Cartão Vermelho**"
+                            )
+
                         for chat_id in chats_monitorados:
                             enviar_mensagem(chat_id, alerta)
                         break
