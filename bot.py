@@ -72,14 +72,15 @@ async def ativar_monitoramento(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 def main():
-    TOKEN = os.getenv("TELEGRAM_TOKEN", 8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk)
-    
+    # Token configurado diretamente no código
+    TOKEN = "8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk"
+
     application = ApplicationBuilder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("monitorar", ativar_monitoramento))
 
-    print("Bot autônomo com as ligas principais iniciado...")
+    print("Bot autônomo com as ligas principais iniciado com sucesso...")
     application.run_polling()
 
 if __name__ == '__main__':
