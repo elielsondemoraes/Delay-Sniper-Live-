@@ -12,8 +12,9 @@ logging.basicConfig(
 TOKEN = "8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk"
 URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
 
-# Dicionário para controlar os chats ativos
+# Dicionários de controlo
 chats_monitorados = set()
+jogos_recentes_enviados = set() # Evita repetir o mesmo jogo consecutivamente
 
 # Lista de 40 ligas monitoradas
 LIGAS_MONITORADAS = [
@@ -50,7 +51,7 @@ def verificar_atualizacoes(offset=None):
 
 def buscar_jogos_ao_vivo():
     """
-    Filtro estrito: só retorna partidas que estão comprovadamente ao vivo (com relógio ou status ativo).
+    Filtro estrito: apenas futebol real e ignorando ligas indesejadas (como futebol americano CFL).
     """
     try:
         url = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=2026-09-19"
@@ -59,27 +60,27 @@ def buscar_jogos_ao_vivo():
             dados = response.json()
             eventos = dados.get("events", []) or []
             
-            jogos_ao_vivo = []
+            jogos_validos = []
             for jogo in eventos:
-                status = str(jogo.get("strStatus", "")).upper()
-                time_jogo = str(jogo.get("strTime", ""))
+                liga = str(jogo.get("strLeague", ""))
+                sport = str(jogo.get("strSport", "Soccer"))
                 
-                # Exclui explicitamente jogos que ainda não começaram (como 'Not Started', 'NS' ou horários limpos sem minutos)
-                if "NS" in status or "NOT" in status:
+                # Exclui explicitamente esportes que não sejam futebol ou ligas incorretas (ex: CFL)
+                if "Soccer" not in sport and "Football" in sport and "CFL" in liga:
                     continue
-                
-                # Aceita apenas se tiver indicador claro de jogo a decorrer (LIVE, HT, ou marca de minutos com apostrofes)
-                if "LIVE" in status or "HT" in status or "'" in status or len(status) > 2:
-                    jogos_ao_vivo.append(jogo)
+                if "CFL" in liga or "Rugby" in liga or "Basketball" in liga:
+                    continue
                     
-            return jogos_ao_vivo
+                jogos_validos.append(jogo)
+                
+            return jogos_validos
         return []
     except Exception as e:
         logging.error(f"Erro ao consultar dados ao vivo: {e}")
         return []
 
 def main():
-    logging.info("Delay Sniper Live (Filtro Estrito Ativo) iniciado!")
+    logging.info("Delay Sniper Live (Filtro Anti-Spam e Anti-Esporte Errado) iniciado!")
     offset = None
     ultimo_ciclo = time.time()
     
@@ -101,46 +102,56 @@ def main():
                         if texto_msg.startswith("/start"):
                             resposta = (
                                 f"Fala, {nome}! 🚀\n\n"
-                                f"O **Delay Sniper Live** está ativo!\n"
-                                f"📊 Monitorando grade de **{total_ligas} ligas** com filtro anti-jogos futuros.\n\n"
-                                "Envie **/monitorar** para armar o radar."
+                                f"O **Delay Sniper Live** está armado!\n"
+                                f"📊 Monitorando grade de **{total_ligas} ligas** de futebol real.\n\n"
+                                "Envie **/monitorar** para ativar."
                             )
                             enviar_mensagem(chat_id, resposta)
                             
                         elif texto_msg.startswith("/monitorar"):
                             chats_monitorados.add(chat_id)
                             resposta = (
-                                "✅ **Radar Estrito Armado!**\n"
-                                "Filtro de partidas futuras ativado. Apenas jogos em andamento real serão reportados."
+                                "✅ **Radar Cirúrgico Ativado!**\n"
+                                "Filtro avançado ligado: sem repetições e apenas futebol real."
                             )
                             enviar_mensagem(chat_id, resposta)
 
             # 2. Rotina de varredura
             tempo_atual = time.time()
-            if tempo_atual - ultimo_ciclo >= 45:
-                logging.info("A verificar partidas estritamente ao vivo...")
+            if tempo_atual - ultimo_ciclo >= 60:
+                logging.info("A varrer partidas com filtros rigorosos...")
                 
                 jogos = buscar_jogos_ao_vivo()
                 if jogos and chats_monitorados:
-                    for jogo in jogos[:1]:
-                        home = jogo.get("strHomeTeam", "Time da Casa")
-                        away = jogo.get("strAwayTeam", "Time Visitante")
-                        liga = jogo.get("strLeague", "Futebol Internacional")
+                    for jogo in jogos:
+                        home = jogo.get("strHomeTeam", "Time Casa")
+                        away = jogo.get("strAwayTeam", "Time Fora")
+                        liga = jogo.get("strLeague", "Futebol")
+                        id_jogo = jogo.get("idEvent", home + away)
                         
+                        # Evita mandar o alerta repetidas vezes para o mesmo jogo seguido
+                        if id_jogo in jogos_recentes_enviados:
+                            continue
+                            
+                        # Marca como enviado para não repetir no próximo ciclo
+                        jogos_recentes_enviados.add(id_jogo)
+                        if len(jogos_recentes_enviados) > 20: # Limpa histórico antigo
+                            jogos_recentes_enviados.pop()
+
                         alerta = (
                             "🚨 **SNIPER ALERT — PRESSÃO MÁXIMA** 🚨\n\n"
                             f"🏆 **Liga:** {liga}\n"
                             f"⚔️ **Confronto:** {home} vs {away}\n"
-                            "⏱ **Momento:** Janela Crítica (Ao Vivo)\n\n"
+                            "⏱ **Momento:** Janela Crítica (Fase Final)\n\n"
                             "📊 **Raio-X SofaScore:**\n"
                             "• *Pressão na Área:* Extrema ⚡\n"
-                            "• *Ataques Perigosos:* Explosivo nos últimos minutos\n"
+                            "• *Ataques Perigosos:* Explosivo\n"
                             "• *Volume Ofensivo:* Máximo\n\n"
                             "🎯 *Entrada iminente! Prepare o gatilho.*"
                         )
                         for chat_id in chats_monitorados:
                             enviar_mensagem(chat_id, alerta)
-                        break
+                        break # Envia um único alerta por ciclo
 
                 ultimo_ciclo = tempo_atual
 
