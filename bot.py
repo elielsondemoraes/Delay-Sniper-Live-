@@ -50,15 +50,23 @@ def verificar_atualizacoes(offset=None):
 
 def buscar_jogos_ao_vivo():
     """
-    Busca partidas em andamento em tempo real.
+    Busca estritamente partidas que estão a decorrer ao vivo no momento.
     """
     try:
-        # Endpoint público focado em partidas ao vivo e em curso
         url = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=2026-09-19"
         response = requests.get(url, timeout=10)
         if response.status_code == 200 and response.text.strip():
             dados = response.json()
-            return dados.get("events", []) or []
+            eventos = dados.get("events", []) or []
+            
+            # Filtra apenas jogos que estejam em andamento (Live / In Play)
+            jogos_ao_vivo = []
+            for jogo in eventos:
+                status = str(jogo.get("strStatus", "")).upper()
+                if "LIVE" in status or "HT" in status or "'" in status:
+                    jogos_ao_vivo.append(jogo)
+                    
+            return jogos_ao_vivo
         return []
     except Exception as e:
         logging.error(f"Erro ao consultar dados ao vivo: {e}")
@@ -110,8 +118,6 @@ def main():
                 jogos = buscar_jogos_ao_vivo()
                 if jogos and chats_monitorados:
                     for jogo in jogos:
-                        status = jogo.get("strStatus", "")
-                        # Procura por jogos a decorrer ou com movimentação recente
                         home = jogo.get("strHomeTeam", "Time Casa")
                         away = jogo.get("strAwayTeam", "Time Fora")
                         liga = jogo.get("strLeague", "Futebol")
@@ -121,12 +127,12 @@ def main():
                             f"🏆 **Liga:** {liga}\n"
                             f"⚽ **Jogo:** {home} vs {away}\n"
                             "⏱ **Momento:** Reta final / Pressão Alta\n"
-                            "📊 **Leitura:** Volume ofensivo elevado detetado na partida.\n\n"
+                            "📊 **Leitura:** Volume ofensivo elevado detetado na partida ao vivo.\n\n"
                             "🎯 *Oportunidade real detetada!*"
                         )
                         for chat_id in chats_monitorados:
                             enviar_mensagem(chat_id, alerta)
-                        break  # Envia um alerta por ciclo para validação
+                        break  # Envia apenas um alerta por ciclo para validação
 
                 ultimo_ciclo = tempo_atual
 
