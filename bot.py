@@ -47,7 +47,7 @@ def buscar_jogos_ao_vivo():
             dados = response.json()
             partidas = dados.get("matches", [])
             
-            jogos_ao vivo = []
+            jogos_ao_vivo = []
             for jogo in partidas:
                 home = jogo.get("homeTeam", {}).get("name", "Time Casa")
                 away = jogo.get("awayTeam", {}).get("name", "Time Fora")
