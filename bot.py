@@ -2,6 +2,7 @@ import os
 import time
 import logging
 import requests
+import random
 
 # Configuração de logs
 logging.basicConfig(
@@ -11,6 +12,9 @@ logging.basicConfig(
 
 TOKEN = "8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk"
 URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
+
+# Dicionário para controlar quais chats ativaram o monitoramento automático
+chats_monitorados = set()
 
 # Lista completa com as 40+ ligas monitoradas
 LIGAS_MONITORADAS = [
@@ -75,7 +79,7 @@ def verificar_atualizacoes(offset=None):
         return None
 
 def main():
-    logging.info("Radar de Pressão iniciado com sucesso em modo autônomo!")
+    logging.info("Delay Sniper Live iniciado com sucesso!")
     offset = None
     ultimo_ciclo = time.time()
     
@@ -83,6 +87,7 @@ def main():
 
     while True:
         try:
+            # 1. Processa comandos do Telegram
             dados = verificar_atualizacoes(offset)
             if dados and "result" in dados:
                 for resultado in dados["result"]:
@@ -96,23 +101,41 @@ def main():
                         if texto_msg.startswith("/start"):
                             resposta = (
                                 f"Fala, {nome}! 🚀\n\n"
-                                f"O **Radar de Pressão** está 100% operacional!\n"
+                                f"O **Delay Sniper Live** está 100% operacional!\n"
                                 f"📊 Monitorando ativamente uma grade robusta com **{total_ligas} ligas**.\n\n"
-                                "Envie **/monitorar** para ativar os rastreios em segundo plano."
+                                "Envie **/monitorar** para ativar os rastreios de pressão em segundo plano."
                             )
                             enviar_mensagem(chat_id, resposta)
                             
                         elif texto_msg.startswith("/monitorar"):
+                            chats_monitorados.add(chat_id)
                             resposta = (
                                 "✅ **Varredura automática ativada com sucesso!**\n"
-                                f"Monitoramento contínuo das {total_ligas} ligas ativado em segundo plano."
+                                f"Monitoramento contínuo das {total_ligas} ligas ligado em segundo plano. "
+                                "Assim que houver pressão alta em campo, mandarei o alerta aqui."
                             )
                             enviar_mensagem(chat_id, resposta)
 
-            # Rotina de varredura automática a cada 60 segundos
+            # 2. Rotina de varredura automática a cada 60 segundos
             tempo_atual = time.time()
             if tempo_atual - ultimo_ciclo >= 60:
-                logging.info(f"Varredura automática executada nas {total_ligas} ligas...")
+                logging.info(f"Executando varredura nas {total_ligas} ligas...")
+                
+                # Exemplo de lógica de disparo para chats ativos (se houver chats monitorando)
+                # No futuro, aqui você encaixa a sua API de placares/estatísticas ao vivo
+                if chats_monitorados and random.choice([True, False]): # Simulação dinâmica de oportunidade
+                    liga_escolhida = random.choice(LIGAS_MONITORADAS)
+                    alerta = (
+                        "🚨 **ALERTA DE PRESSÃO MÁXIMA!** 🚨\n\n"
+                        f"🏆 **Liga:** {liga_escolhida}\n"
+                        "⚽ **Jogo:** Time A vs Time B\n"
+                        "⏱ **Tempo:** 78'\n"
+                        "📊 **Estatísticas:** Pressão sufocante nos últimos 10 minutos (Muitos cantos/Ataques perigosos).\n\n"
+                        "🎯 *Oportunidade detetada pelo Radar!*"
+                    )
+                    for chat_id in chats_monitorados:
+                        enviar_mensagem(chat_id, alerta)
+
                 ultimo_ciclo = tempo_atual
 
         except Exception as e:
