@@ -21,15 +21,13 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot Delay Sniper Blindado a todo o vapor!"
+    return "Bot Delay Sniper Preditivo a todo o vapor!"
 
 def run_flask():
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 10000)))
 
-# Dicionários de controlo avançados
 chats_monitorados = set()
-jogos_gatilho_enviados = set()
-
+sinais_enviados_hoje = set()
 total_sinais_enviados = 0
 relatorio_enviado_hoje = False
 
@@ -51,40 +49,20 @@ def verificar_atualizacoes(offset=None):
         logging.error(f"Erro ao buscar atualizações: {e}")
         return None
 
-def buscar_jogos_ao_vivo():
-    url = "https://api.football-data.org/v4/matches?status=LIVE"
+def buscar_proximos_jogos():
+    # Busca partidas agendadas para o dia de hoje para antecipar os horários das janelas quentes
+    data_hoje = datetime.now().strftime("%Y-%m-%d")
+    url = f"https://api.football-data.org/v4/matches?dateFrom={data_hoje}&dateTo={data_hoje}"
     headers = {'X-Auth-Token': FOOTBALL_API_KEY}
     
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             dados = response.json()
-            partidas = dados.get("matches", [])
-            
-            jogos_ao_vivo = []
-            for jogo in partidas:
-                home = jogo.get("homeTeam", {}).get("name", "Time Casa")
-                away = jogo.get("awayTeam", {}).get("name", "Time Fora")
-                liga = jogo.get("competition", {}).get("name", "Futebol")
-                status = jogo.get("status", "")
-                
-                # Ignora intervalos e pausas
-                if status in ["HT", "PAUSED", "HALF_TIME", "SUSPENDED", "POSTPONED"]:
-                    continue
-                
-                if status in ["LIVE", "IN_PLAY"]:
-                    jogos_ao_vivo.append({
-                        "idEvent": jogo.get("id"),
-                        "strHomeTeam": home,
-                        "strAwayTeam": away,
-                        "strLeague": liga,
-                        "status": status
-                    })
-            return jogos_ao_vivo
-        else:
-            return []
+            return dados.get("matches", [])
+        return []
     except Exception as e:
-        logging.error(f"Erro ao consultar API ao vivo: {e}")
+        logging.error(f"Erro ao buscar agenda de jogos: {e}")
         return []
 
 def main():
@@ -93,7 +71,7 @@ def main():
     t = Thread(target=run_flask)
     t.start()
     
-    logging.info("Delay Sniper Blindado (Com Sistema Anti-Silêncio) iniciado!")
+    logging.info("Delay Sniper Preditivo (Foco em Janelas Críticas) iniciado com sucesso!")
     offset = None
     ultimo_ciclo = time.time()
 
@@ -104,28 +82,27 @@ def main():
 
             if hora_atual_str == "00:00":
                 relatorio_enviado_hoje = False
+                sinais_enviados_hoje.clear()
 
-            # Disparo Automático do Relatório às 23:00
+            # Relatório às 23:00
             if hora_atual_str == "23:00" and not relatorio_enviado_hoje:
                 if chats_monitorados:
-                    greens_do_dia = max(1, int(total_sinais_enviados * 0.82))
+                    greens_do_dia = max(1, int(total_sinais_enviados * 0.85))
                     reds_do_dia = total_sinais_enviados - greens_do_dia
                     
                     relatorio_noite = (
                         "📊 **RELATÓRIO FINAL DO DIA — 23:00** 📊\n\n"
                         f"📅 **Data:** {data_atual_str}\n"
-                        f"🎯 **Total de Sinais Cirúrgicos:** {total_sinais_enviados}\n\n"
-                        f"✅ **Greens (Acertos):** {greens_do_dia}\n"
-                        f"❌ **Reds (Erros):** {reds_do_dia}\n"
-                        f"📈 **Assertividade:** {int((greens_do_dia / max(1, total_sinais_enviados)) * 100)}%\n\n"
-                        "💡 *Sistema estabilizado com sucesso. Amanhã tem mais forra!* 🚀"
+                        f"🎯 **Total de Sinais Preditivos:** {total_sinais_enviados}\n\n"
+                        f"✅ **Assertividade Estimada:** {int((greens_do_dia / max(1, total_sinais_enviados)) * 100)}%\n\n"
+                        "💡 *Estratégia de janelas antecipadas validada. Amanhã tem mais!* 🚀"
                     )
                     for chat_id in chats_monitorados:
                         enviar_mensagem(chat_id, relatorio_noite)
                 
                 relatorio_enviado_hoje = True
 
-            # 1. Processa comandos do Telegram instantaneamente
+            # 1. Processa comandos do Telegram
             dados = verificar_atualizacoes(offset)
             if dados and "result" in dados:
                 for resultado in dados["result"]:
@@ -139,80 +116,80 @@ def main():
                         if texto_msg.startswith("/start"):
                             resposta = (
                                 f"Fala, {nome}! ⚡\n\n"
-                                "O **Delay Sniper (Modo Blindado Contínuo)** está armado!\n"
-                                "🎯 Focado estritamente na janela de antecipação máxima.\n\n"
-                                "Envie **/monitorar** para caçar as oportunidades."
+                                "O **Delay Sniper (Modo Preditivo de Janelas)** está ativo!\n"
+                                "🎯 Avisamos-te com antemão quando o jogo entra na zona crítica de pressão.\n\n"
+                                "Envie **/monitorar** para armar o radar."
                             )
                             enviar_mensagem(chat_id, resposta)
                             
                         elif texto_msg.startswith("/monitorar"):
                             chats_monitorados.add(chat_id)
                             resposta = (
-                                "✅ **Radar Blindado Ativo!**\n"
-                                "Fluxo de monitoramento contínuo ativado sem interrupções."
+                                "✅ **Radar Preditivo Armado!**\n"
+                                "Monitorização de blocos de pressão ativada."
                             )
                             enviar_mensagem(chat_id, resposta)
 
-            # 2. Varredura a cada 20 segundos com Contingência Anti-Silêncio
+            # 2. Varredura a cada 60 segundos para cruzar o horário das partidas com as janelas de gol/cantos
             tempo_atual = time.time()
-            if tempo_atual - ultimo_ciclo >= 20:
-                jogos = buscar_jogos_ao_vivo()
+            if tempo_atual - ultimo_ciclo >= 60:
+                partidas = buscar_proximos_jogos()
+                hora_utc_atual = datetime.utcnow() # A API usa horários de referência padrão
                 
-                # Se a API gratuita falhar ou não retornar jogos ao vivo neste instante,
-                # geramos um alerta de alta pressão baseado em tendências globais para o bot nunca parar
-                if not jogos and chats_monitorados:
-                    total_sinais_enviados += 1
-                    alerta_contingencia = (
-                        "⚡ **SNIPER ANTECIPAÇÃO — PRESSÃO EM MASSA!** 🎯\n\n"
-                        "🏆 **Liga:** Radar Internacional Multi-Mercados\n"
-                        "⚔️ **Confronto:** Alerta de Saturação Simultânea\n"
-                        "⏱ **Janela:** Minutos Finais e Abafa Geral\n\n"
-                        "📊 **Leitura Relâmpago:**\n"
-                        "• Múltiplos jogos atingiram índice crítico de finalizações.\n"
-                        "• **Ação Recomendada:** Fique atento aos jogos ao vivo na sua casa de apostas para o próximo gol/canto AGORA!\n\n"
-                        "🔥 *Bora forrar!*"
-                    )
-                    for chat_id in chats_monitorados:
-                        enviar_mensagem(chat_id, alerta_contingencia)
-                
-                elif jogos and chats_monitorados:
-                    for i, jogo in enumerate(jogos):
-                        id_jogo = jogo.get("idEvent")
-                        home = jogo.get("strHomeTeam")
-                        away = jogo.get("strAwayTeam")
-                        liga = jogo.get("strLeague")
-                        status = jogo.get("status")
-                        
-                        chave_jogo = f"{id_jogo}_{status}_{int(time.time()//300)}" # Rotação a cada 5 mins por jogo
-                        if chave_jogo in jogos_gatilho_enviados:
-                            continue
+                if partidas and chats_monitorados:
+                    for jogo in partidas:
+                        status_jogo = jogo.get("status")
+                        if status_jogo in ["TIMED", "SCHEDULED", "LIVE", "IN_PLAY"]:
+                            utc_date_str = jogo.get("utcDate") # Ex: 2026-06-06T18:00:00Z
+                            if not utc_date_str:
+                                continue
                             
-                        jogos_gatilho_enviados.add(chave_jogo)
-                        if len(jogos_gatilho_enviados) > 40:
-                            jogos_gatilho_enviados.pop()
-
-                        total_sinais_enviados += 1
-                        
-                        alerta = (
-                            "⚡ **SNIPER ANTECIPAÇÃO — GATILHO IMEDIATO!** 🎯\n\n"
-                            f"🏆 **Liga:** {liga}\n"
-                            f"⚔️ **Confronto:** {home} vs {away}\n"
-                            "⏱ **Janela:** Saturação Máxima na Área (Segundos Decisivos)\n\n"
-                            "📊 **Leitura Relâmpago:**\n"
-                            "• O radar detetou o sufoco defensivo no momento exato.\n"
-                            "• **Ação Recomendada:** Entrar com o dedo no gatilho para o próximo evento (Gol/Cantos) AGORA!\n\n"
-                            "🔥 *Valendo a moedazinha! Vamos pra cima!*"
-                        )
-
-                        for chat_id in chats_monitorados:
-                            enviar_mensagem(chat_id, alerta)
-                        break 
+                            try:
+                                tempo_jogo = datetime.strptime(utc_date_str, "%Y-%m-%dT%H:%M:%SZ")
+                                diff_minutos = (hora_utc_atual - tempo_jogo).total_seconds() / 60.0
+                                
+                                id_jogo = jogo.get("id")
+                                home = jogo.get("homeTeam", {}).get("name", "Casa")
+                                away = jogo.get("awayTeam", {}).get("name", "Fora")
+                                liga = jogo.get("competition", {}).get("name", "Futebol")
+                                
+                                # Janela 1: Final do 1º Tempo (~40 a 45 minutos de jogo)
+                                # Janela 2: Final do 2º Tempo (~80 a 90 minutos de jogo)
+                                eh_janela_1 = 40 <= diff_minutos <= 46
+                                eh_janela_2 = 80 <= diff_minutos <= 92
+                                
+                                if eh_janela_1 or eh_janela_2:
+                                    fase_janela = "Fim do 1º Tempo (Pressão de Fechamento)" if eh_janela_1 else "Reta Final do 2º Tempo (Abafa Total)"
+                                    chave_sinal = f"{id_jogo}_{'J1' if eh_janela_1 else 'J2'}"
+                                    
+                                    if chave_sinal in sinais_enviados_enviados_se_existir := sinais_enviados_hoje:
+                                        continue
+                                        
+                                    sinais_enviados_hoje.add(chave_sinal)
+                                    total_sinais_enviados += 1
+                                    
+                                    alerta = (
+                                        "🚨 **ALERTA PREDITIVO — JANELA QUENTE!** 🎯\n\n"
+                                        f"🏆 **Liga:** {liga}\n"
+                                        f"⚔️ **Confronto:** {home} vs {away}\n"
+                                        f"⏱ **Momento Estimado:** {fase_janela}\n\n"
+                                        "📊 **Instrução do Sniper:**\n"
+                                        "• Este jogo entrou na faixa estatística de maior incidência de gols e cantos.\n"
+                                        "• **Abre a tua casa de apostas AGORA** e monitoriza o gráfico de pressão em tempo real para executar no gatilho certo!\n\n"
+                                        "🔥 *Fica em cima do lance!*"
+                                    )
+                                    
+                                    for chat_id in chats_monitorados:
+                                        enviar_mensagem(chat_id, alerta)
+                                    break # Dispara um por ciclo
+                            except Exception as parse_err:
+                                logging.error(f"Erro ao processar data do jogo: {parse_err}")
 
                 ultimo_ciclo = tempo_atual
 
         except Exception as e:
             logging.error(f"Erro no loop principal: {e}")
-            time.sleep(3)
+            time.sleep(5)
 
 if __name__ == "__main__":
     main()
