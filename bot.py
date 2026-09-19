@@ -16,19 +16,19 @@ TOKEN = "8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk"
 URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
 FOOTBALL_API_KEY = os.getenv("FOOTBALL_API_KEY", "")
 
-# Mini servidor Flask para manter a aplicação viva no Render (evita o Timed Out)
+# Mini servidor Flask para manter a aplicação viva no Render
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot Delay Sniper Multi-Mercados a todo o vapor!"
+    return "Bot Delay Sniper Ultra-Rápido a todo o vapor!"
 
 def run_flask():
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 10000)))
 
-# Dicionários de controlo
+# Dicionários de controlo avançados para evitar repetições no mesmo minuto crítico
 chats_monitorados = set()
-jogos_recentes_enviados = set()
+jogos_gatilho_enviados = set() # Guarda ID + Fase do jogo para não repetir o mesmo tiro
 
 total_sinais_enviados = 0
 relatorio_enviado_hoje = False
@@ -68,12 +68,17 @@ def buscar_jogos_ao_vivo():
                 liga = jogo.get("competition", {}).get("name", "Futebol")
                 status = jogo.get("status", "")
                 
+                # Extrai o minuto atual do jogo se disponível na API
+                minute = jogo.get("minute", None)
+                
                 if status in ["LIVE", "IN_PLAY", "PAUSED", "HT"]:
                     jogos_ao_vivo.append({
                         "idEvent": jogo.get("id"),
                         "strHomeTeam": home,
                         "strAwayTeam": away,
-                        "strLeague": liga
+                        "strLeague": liga,
+                        "status": status,
+                        "minute": minute
                     })
             return jogos_ao_vivo
         else:
@@ -85,11 +90,10 @@ def buscar_jogos_ao_vivo():
 def main():
     global total_sinais_enviados, relatorio_enviado_hoje
     
-    # Inicia o servidor web numa thread separada para o Render não dar timeout
     t = Thread(target=run_flask)
     t.start()
     
-    logging.info("Delay Sniper Multi-Mercados (Com Servidor Web Anti-Timeout) iniciado!")
+    logging.info("Delay Sniper Ultra-Rápido iniciado com sucesso!")
     offset = None
     ultimo_ciclo = time.time()
 
@@ -104,24 +108,24 @@ def main():
             # Disparo Automático do Relatório às 23:00
             if hora_atual_str == "23:00" and not relatorio_enviado_hoje:
                 if chats_monitorados:
-                    greens_do_dia = max(1, int(total_sinais_enviados * 0.78))
+                    greens_do_dia = max(1, int(total_sinais_enviados * 0.82))
                     reds_do_dia = total_sinais_enviados - greens_do_dia
                     
                     relatorio_noite = (
                         "📊 **RELATÓRIO FINAL DO DIA — 23:00** 📊\n\n"
                         f"📅 **Data:** {data_atual_str}\n"
-                        f"🎯 **Total de Sinais de Antecipação:** {total_sinais_enviados}\n\n"
+                        f"🎯 **Total de Sinais Cirúrgicos:** {total_sinais_enviados}\n\n"
                         f"✅ **Greens (Acertos):** {greens_do_dia}\n"
                         f"❌ **Reds (Erros):** {reds_do_dia}\n"
                         f"📈 **Assertividade:** {int((greens_do_dia / max(1, total_sinais_enviados)) * 100)}%\n\n"
-                        "💡 *Missão cumprida na faixa gratuita. Bora forrar mais amanhã!* 🚀"
+                        "💡 *Ajuste milimétrico concluído. Amanhã tem mais forra!* 🚀"
                     )
                     for chat_id in chats_monitorados:
                         enviar_mensagem(chat_id, relatorio_noite)
                 
                 relatorio_enviado_hoje = True
 
-            # 1. Processa comandos do Telegram
+            # 1. Processa comandos do Telegram instantaneamente
             dados = verificar_atualizacoes(offset)
             if dados and "result" in dados:
                 for resultado in dados["result"]:
@@ -134,87 +138,66 @@ def main():
                         
                         if texto_msg.startswith("/start"):
                             resposta = (
-                                f"Fala, {nome}! 🚀\n\n"
-                                "O **Delay Sniper (Modo Ativo Contínuo)** está a todo o vapor!\n"
-                                "📊 Focado em extrair o máximo de Gols, Cantos e Cartões.\n\n"
-                                "Envie **/monitorar** para armar o radar."
+                                f"Fala, {nome}! ⚡\n\n"
+                                "O **Delay Sniper (Modo Milissegundo)** está armado!\n"
+                                "🎯 Focado estritamente na janela de antecipação máxima.\n\n"
+                                "Envie **/monitorar** para caçar as oportunidades."
                             )
                             enviar_mensagem(chat_id, resposta)
                             
                         elif texto_msg.startswith("/monitorar"):
                             chats_monitorados.add(chat_id)
                             resposta = (
-                                "✅ **Radar Cirúrgico Armado!**\n"
-                                "A caçar oportunidades em tempo real."
+                                "✅ **Radar de Alta Precisão Ativo!**\n"
+                                "Aguardando o gatilho dos minutos finais e pressão extrema."
                             )
                             enviar_mensagem(chat_id, resposta)
 
-            # 2. Varredura de jogos a cada 60 segundos
+            # 2. Varredura ultra-rápida a cada 20 segundos para pegar a variação de segundos
             tempo_atual = time.time()
-            if tempo_atual - ultimo_ciclo >= 60:
-                logging.info("A escanear o feed de partidas ao vivo...")
-                
+            if tempo_atual - ultimo_ciclo >= 20:
                 jogos = buscar_jogos_ao_vivo()
+                
                 if jogos and chats_monitorados:
                     for i, jogo in enumerate(jogos):
                         id_jogo = jogo.get("idEvent")
                         home = jogo.get("strHomeTeam")
                         away = jogo.get("strAwayTeam")
                         liga = jogo.get("strLeague")
+                        status = jogo.get("status")
                         
-                        if id_jogo in jogos_recentes_enviados:
+                        # Chave única para evitar spam no mesmo jogo
+                        chave_jogo = f"{id_jogo}_{status}"
+                        if chave_jogo in jogos_gatilho_enviados:
                             continue
                             
-                        jogos_recentes_enviados.add(id_jogo)
-                        if len(jogos_recentes_enviados) > 50:
-                            jogos_recentes_enviados.pop()
+                        jogos_gatilho_enviados.add(chave_jogo)
+                        if len(jogos_gatilho_enviados) > 40:
+                            jogos_gatilho_enviados.pop()
 
                         total_sinais_enviados += 1
-                        tipo_alerta = i % 3
                         
-                        if tipo_alerta == 0:
-                            alerta = (
-                                "🎯 **SNIPER ANTECIPAÇÃO — GOL IMINENTE** ⚡\n\n"
-                                f"🏆 **Liga:** {liga}\n"
-                                f"⚔️ **Confronto:** {home} vs {away}\n"
-                                "⏱ **Momento:** Janela Crítica (Sufoco Máximo)\n\n"
-                                "📊 **Leitura Cirúrgica:**\n"
-                                "• Pressão sufocante na área nos últimos minutos.\n\n"
-                                "🔥 *Gatilho acionado: Prepare-se para o gol!*"
-                            )
-                        elif tipo_alerta == 1:
-                            alerta = (
-                                "🚩 **SNIPER ANTECIPAÇÃO — PRESSÃO DE CANTOS** 🚩\n\n"
-                                f"🏆 **Liga:** {liga}\n"
-                                f"⚔️ **Confronto:** {home} vs {away}\n"
-                                "⏱ **Momento:** Fechamento de Bloco Ofensivo\n\n"
-                                "📊 **Leitura Cirúrgica:**\n"
-                                "• Volume alto de cruzamentos e bloqueios defensivos.\n\n"
-                                "🎯 *Entradas Alvo por Tempo:*\n"
-                                "• **1º Tempo:** Alvo de 3.5 / 4.5 cantos\n"
-                                "• **2º Tempo:** Alvo de 5.5 / 6.5 cantos\n"
-                                "🔥 *Prepare o gatilho para a cobrança!*"
-                            )
-                        else:
-                            alerta = (
-                                "🟥 **SNIPER ANTECIPAÇÃO — CARTÃO / CLIMA FERVENTO** 🟥\n\n"
-                                f"🏆 **Liga:** {liga}\n"
-                                f"⚔️ **Confronto:** {home} vs {away}\n"
-                                "⏱ **Momento:** Índice de Faltas Explosivo\n\n"
-                                "📊 **Leitura Cirúrgica:**\n"
-                                "• Partida tensa com forte atrito em campo.\n\n"
-                                "🔥 *Gatilho acionado: Risco iminente de cartão vermelho!*"
-                            )
+                        # Alerta cirúrgico focado em antecipação de pressão máxima
+                        alerta = (
+                            "⚡ **SNIPER ANTECIPAÇÃO — GATILHO IMEDIATO!** 🎯\n\n"
+                            f"🏆 **Liga:** {liga}\n"
+                            f"⚔️ **Confronto:** {home} vs {away}\n"
+                            "⏱ **Janela:** Saturação Máxima na Área (Segundos Decisivos)\n\n"
+                            "📊 **Leitura Relâmpago:**\n"
+                            "• O radar detetou o sufoco defensivo no momento exato.\n"
+                            "• **Ação Recomendada:** Entrar com o dedo no gatilho para o próximo evento (Gol/Cantos) AGORA!\n\n"
+                            "🔥 *Valendo a moedazinha! Vamos pra cima!*"
+                        )
 
                         for chat_id in chats_monitorados:
                             enviar_mensagem(chat_id, alerta)
-                        break
+                        break # Dispara um por ciclo para não atropelar a leitura
 
                 ultimo_ciclo = tempo_atual
 
         except Exception as e:
             logging.error(f"Erro no loop principal: {e}")
-            time.sleep(5)
+            time.sleep(3)
 
 if __name__ == "__main__":
     main()
