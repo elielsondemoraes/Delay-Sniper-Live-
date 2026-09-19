@@ -1,6 +1,5 @@
 import os
 import logging
-import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 
@@ -93,13 +92,14 @@ async def ativar_monitoramento(update: Update, context: ContextTypes.DEFAULT_TYP
 def main():
     TOKEN = "8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk"
 
+    # Constrói a aplicação usando a forma padrão recomendada para a v20.7
     application = ApplicationBuilder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("monitorar", ativar_monitoramento))
 
     print("Bot autônomo com as 40+ ligas iniciado com sucesso...")
-    application.run_polling(drop_pending_updates=True)
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
