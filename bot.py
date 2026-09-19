@@ -26,9 +26,9 @@ def home():
 def run_flask():
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 10000)))
 
-# Dicionários de controlo avançados para evitar repetições no mesmo minuto crítico
+# Dicionários de controlo avançados
 chats_monitorados = set()
-jogos_gatilho_enviados = set() # Guarda ID + Fase do jogo para não repetir o mesmo tiro
+jogos_gatilho_enviados = set()
 
 total_sinais_enviados = 0
 relatorio_enviado_hoje = False
@@ -68,17 +68,17 @@ def buscar_jogos_ao_vivo():
                 liga = jogo.get("competition", {}).get("name", "Futebol")
                 status = jogo.get("status", "")
                 
-                # Extrai o minuto atual do jogo se disponível na API
-                minute = jogo.get("minute", None)
+                # BLOQUEIO RIGOROSO: Ignora se estiver no intervalo ou parado
+                if status in ["HT", "PAUSED", "HALF_TIME", "SUSPENDED", "POSTPONED"]:
+                    continue
                 
-                if status in ["LIVE", "IN_PLAY", "PAUSED", "HT"]:
+                if status in ["LIVE", "IN_PLAY"]:
                     jogos_ao_vivo.append({
                         "idEvent": jogo.get("id"),
                         "strHomeTeam": home,
                         "strAwayTeam": away,
                         "strLeague": liga,
-                        "status": status,
-                        "minute": minute
+                        "status": status
                     })
             return jogos_ao_vivo
         else:
@@ -93,7 +93,7 @@ def main():
     t = Thread(target=run_flask)
     t.start()
     
-    logging.info("Delay Sniper Ultra-Rápido iniciado com sucesso!")
+    logging.info("Delay Sniper Ultra-Rápido (Com Filtro Anti-Intervalo) iniciado com sucesso!")
     offset = None
     ultimo_ciclo = time.time()
 
@@ -118,7 +118,7 @@ def main():
                         f"✅ **Greens (Acertos):** {greens_do_dia}\n"
                         f"❌ **Reds (Erros):** {reds_do_dia}\n"
                         f"📈 **Assertividade:** {int((greens_do_dia / max(1, total_sinais_enviados)) * 100)}%\n\n"
-                        "💡 *Ajuste milimétrico concluído. Amanhã tem mais forra!* 🚀"
+                        "💡 *Filtros ajustados com sucesso. Amanhã tem mais forra!* 🚀"
                     )
                     for chat_id in chats_monitorados:
                         enviar_mensagem(chat_id, relatorio_noite)
@@ -149,11 +149,11 @@ def main():
                             chats_monitorados.add(chat_id)
                             resposta = (
                                 "✅ **Radar de Alta Precisão Ativo!**\n"
-                                "Aguardando o gatilho dos minutos finais e pressão extrema."
+                                "Aguardando o gatilho dos minutos finais e pressão extrema (Intervalos Bloqueados)."
                             )
                             enviar_mensagem(chat_id, resposta)
 
-            # 2. Varredura ultra-rápida a cada 20 segundos para pegar a variação de segundos
+            # 2. Varredura ultra-rápida a cada 20 segundos
             tempo_atual = time.time()
             if tempo_atual - ultimo_ciclo >= 20:
                 jogos = buscar_jogos_ao_vivo()
@@ -166,7 +166,6 @@ def main():
                         liga = jogo.get("strLeague")
                         status = jogo.get("status")
                         
-                        # Chave única para evitar spam no mesmo jogo
                         chave_jogo = f"{id_jogo}_{status}"
                         if chave_jogo in jogos_gatilho_enviados:
                             continue
@@ -177,7 +176,6 @@ def main():
 
                         total_sinais_enviados += 1
                         
-                        # Alerta cirúrgico focado em antecipação de pressão máxima
                         alerta = (
                             "⚡ **SNIPER ANTECIPAÇÃO — GATILHO IMEDIATO!** 🎯\n\n"
                             f"🏆 **Liga:** {liga}\n"
@@ -191,7 +189,7 @@ def main():
 
                         for chat_id in chats_monitorados:
                             enviar_mensagem(chat_id, alerta)
-                        break # Dispara um por ciclo para não atropelar a leitura
+                        break 
 
                 ultimo_ciclo = tempo_atual
 
