@@ -50,7 +50,7 @@ def verificar_atualizacoes(offset=None):
 
 def buscar_jogos_ao_vivo():
     """
-    Busca estritamente partidas ao vivo com foco em alta pressão.
+    Filtro estrito: só retorna partidas que estão comprovadamente ao vivo (com relógio ou status ativo).
     """
     try:
         url = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=2026-09-19"
@@ -62,18 +62,24 @@ def buscar_jogos_ao_vivo():
             jogos_ao_vivo = []
             for jogo in eventos:
                 status = str(jogo.get("strStatus", "")).upper()
-                if "LIVE" in status or "HT" in status or "'" in status:
+                time_jogo = str(jogo.get("strTime", ""))
+                
+                # Exclui explicitamente jogos que ainda não começaram (como 'Not Started', 'NS' ou horários limpos sem minutos)
+                if "NS" in status or "NOT" in status:
+                    continue
+                
+                # Aceita apenas se tiver indicador claro de jogo a decorrer (LIVE, HT, ou marca de minutos com apostrofes)
+                if "LIVE" in status or "HT" in status or "'" in status or len(status) > 2:
                     jogos_ao_vivo.append(jogo)
                     
-            # Se encontrar jogos ao vivo, retorna eles; caso contrário, usa a lista geral como suporte para teste
-            return jogos_ao_vivo if jogos_ao_vivo else eventos
+            return jogos_ao_vivo
         return []
     except Exception as e:
         logging.error(f"Erro ao consultar dados ao vivo: {e}")
         return []
 
 def main():
-    logging.info("Delay Sniper Live (Estilo SofaScore - Fino do Fino) iniciado!")
+    logging.info("Delay Sniper Live (Filtro Estrito Ativo) iniciado!")
     offset = None
     ultimo_ciclo = time.time()
     
@@ -95,8 +101,8 @@ def main():
                         if texto_msg.startswith("/start"):
                             resposta = (
                                 f"Fala, {nome}! 🚀\n\n"
-                                f"O **Delay Sniper Live (Modo SofaScore)** está ativo!\n"
-                                f"📊 Monitorando grade de **{total_ligas} ligas** com precisão cirúrgica.\n\n"
+                                f"O **Delay Sniper Live** está ativo!\n"
+                                f"📊 Monitorando grade de **{total_ligas} ligas** com filtro anti-jogos futuros.\n\n"
                                 "Envie **/monitorar** para armar o radar."
                             )
                             enviar_mensagem(chat_id, resposta)
@@ -104,15 +110,15 @@ def main():
                         elif texto_msg.startswith("/monitorar"):
                             chats_monitorados.add(chat_id)
                             resposta = (
-                                "✅ **Radar de Alta Precisão Armado!**\n"
-                                f"Monitoramento de pressão e volume ofensivo ligado para as {total_ligas} ligas."
+                                "✅ **Radar Estrito Armado!**\n"
+                                "Filtro de partidas futuras ativado. Apenas jogos em andamento real serão reportados."
                             )
                             enviar_mensagem(chat_id, resposta)
 
-            # 2. Rotina de varredura otimizada para o timing de entrada
+            # 2. Rotina de varredura
             tempo_atual = time.time()
-            if tempo_atual - ultimo_ciclo >= 45:  # Reduzido para 45s para capturar a janela exata
-                logging.info("A executar varredura de alta precisão...")
+            if tempo_atual - ultimo_ciclo >= 45:
+                logging.info("A verificar partidas estritamente ao vivo...")
                 
                 jogos = buscar_jogos_ao_vivo()
                 if jogos and chats_monitorados:
@@ -125,7 +131,7 @@ def main():
                             "🚨 **SNIPER ALERT — PRESSÃO MÁXIMA** 🚨\n\n"
                             f"🏆 **Liga:** {liga}\n"
                             f"⚔️ **Confronto:** {home} vs {away}\n"
-                            "⏱ **Momento:** Janela Crítica (Fase Final)\n\n"
+                            "⏱ **Momento:** Janela Crítica (Ao Vivo)\n\n"
                             "📊 **Raio-X SofaScore:**\n"
                             "• *Pressão na Área:* Extrema ⚡\n"
                             "• *Ataques Perigosos:* Explosivo nos últimos minutos\n"
