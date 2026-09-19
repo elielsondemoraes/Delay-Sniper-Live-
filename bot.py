@@ -3,6 +3,8 @@ import time
 import logging
 import requests
 from datetime import datetime
+from threading import Thread
+from flask import Flask
 
 # Configuração de logs
 logging.basicConfig(
@@ -12,15 +14,22 @@ logging.basicConfig(
 
 TOKEN = "8304259552:AAGm4l7uVV9gGTfFaJyI8ooeS-rPAJnkPDk"
 URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
-
-# Puxa a chave de forma segura do Render
 FOOTBALL_API_KEY = os.getenv("FOOTBALL_API_KEY", "")
+
+# Mini servidor Flask para manter a aplicação viva no Render (evita o Timed Out)
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot Delay Sniper Multi-Mercados a todo o vapor!"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 10000)))
 
 # Dicionários de controlo
 chats_monitorados = set()
 jogos_recentes_enviados = set()
 
-# Contadores para o Relatório Diário das 23:00
 total_sinais_enviados = 0
 relatorio_enviado_hoje = False
 
@@ -43,7 +52,6 @@ def verificar_atualizacoes(offset=None):
         return None
 
 def buscar_jogos_ao_vivo():
-    # Endpoint otimizado para buscar todas as partidas ao vivo disponíveis na camada gratuita
     url = "https://api.football-data.org/v4/matches?status=LIVE"
     headers = {'X-Auth-Token': FOOTBALL_API_KEY}
     
@@ -60,7 +68,6 @@ def buscar_jogos_ao_vivo():
                 liga = jogo.get("competition", {}).get("name", "Futebol")
                 status = jogo.get("status", "")
                 
-                # Garante que apanha qualquer estado de jogo a decorrer
                 if status in ["LIVE", "IN_PLAY", "PAUSED", "HT"]:
                     jogos_ao_vivo.append({
                         "idEvent": jogo.get("id"),
@@ -70,7 +77,6 @@ def buscar_jogos_ao_vivo():
                     })
             return jogos_ao_vivo
         else:
-            logging.warning(f"API retornou status code: {response.status_code}")
             return []
     except Exception as e:
         logging.error(f"Erro ao consultar API ao vivo: {e}")
@@ -79,7 +85,11 @@ def buscar_jogos_ao_vivo():
 def main():
     global total_sinais_enviados, relatorio_enviado_hoje
     
-    logging.info("Delay Sniper Multi-Mercados (Foco Versão Gratuita) iniciado!")
+    # Inicia o servidor web numa thread separada para o Render não dar timeout
+    t = Thread(target=run_flask)
+    t.start()
+    
+    logging.info("Delay Sniper Multi-Mercados (Com Servidor Web Anti-Timeout) iniciado!")
     offset = None
     ultimo_ciclo = time.time()
 
@@ -88,7 +98,6 @@ def main():
             hora_atual_str = datetime.now().strftime("%H:%M")
             data_atual_str = datetime.now().strftime("%Y-%m-%d")
 
-            # Reseta a bandeira do relatório virando a meia-noite
             if hora_atual_str == "00:00":
                 relatorio_enviado_hoje = False
 
@@ -126,8 +135,8 @@ def main():
                         if texto_msg.startswith("/start"):
                             resposta = (
                                 f"Fala, {nome}! 🚀\n\n"
-                                "O **Delay Sniper (Modo Gratuito Ativo)** está a todo o vapor!\n"
-                                "📊 Focado em extrair o máximo de Gols, Cantos e Cartões das partidas disponíveis.\n\n"
+                                "O **Delay Sniper (Modo Ativo Contínuo)** está a todo o vapor!\n"
+                                "📊 Focado em extrair o máximo de Gols, Cantos e Cartões.\n\n"
                                 "Envie **/monitorar** para armar o radar."
                             )
                             enviar_mensagem(chat_id, resposta)
